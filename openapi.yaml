@@ -1,0 +1,466 @@
+openapi: 3.0.0
+info:
+  version: 0.2.0
+  title: 'Oats tetster'
+  description: 'Chinabank Direct Debit Connector'
+servers:
+  - description: Local development
+    url: 'http://localhost:3002'
+paths:
+  /api/payments:
+    post:
+      tags:
+        - payment
+      summary: Creates a payment
+      operationId: createPayment
+      description: Creates a payment
+      parameters:
+        - in: header
+          name: X-DD-Payment-Id
+          required: false
+          schema:
+            type: string
+        - in: header
+          name: X-Business-Id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+        description: Payment Request
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400Response'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401Response'
+        405:
+          description: Access blocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error405Response'
+        408:
+          description: Otp delivery Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error408Response'
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500Response'
+        503:
+          description: Channel Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error503Response'
+      x-test-suite:
+        - description: '[POS] should create payment'
+          request: 
+            header:
+              X-Business-Id: '6abc8163gbadd721jdGG'
+              X-DD-Payment-Id: 'ddpy-abc123'
+            body: '{"access_token":"AYjcyMzY3ZDhiNmJkNTY","account_id":"<acctHashCode>","reference_id":"merchantsTransactionId","amount":10000,"description":"Buy sisig because hungry. Why do you wanna know"}'
+          response:
+            http-status: 200
+            body: '{"id":"tranId","mobile_number":"+63123****123","otp_reference_number":"67ee26810bb52f219e2d410774a3ac214012030af0d0dd4743","otp_expired_date":"2021-01-01T01-01-01Z"}'
+        - description: '[NEG] magic num, account access blocked'
+          request: 
+            header:
+              X-Business-Id: '6abc8163gbadd721jdGG'
+              X-DD-Payment-Id: 'ddpy-abc123'
+            body: '{"access_token":"AYjcyMzY3ZDhiNmJkNTY","account_id":"<acctHashCode>","reference_id":"merchantsTransactionId","amount":9999,"description":"Buy sisig because hungry. Why do you wanna know"}'
+          response:
+            http-status: 200
+            body: '{"id":"tranId","mobile_number":"+63123****123","otp_reference_number":"67ee26810bb52f219e2d410774a3ac214012030af0d0dd4743","otp_expired_date":"2021-01-01T01-01-01Z"}'
+        
+  /api/payments/{id}:
+    get:
+      tags:
+        - payment
+      summary: Get Payment Status
+      operationId: getPaymentStatus
+      description: Get payment status
+      parameters:
+        - in: header
+          name: X-DD-Payment-Id
+          required: false
+          schema:
+            type: string
+        - in: header
+          name: X-Business-Id
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: Bank reference number for the transaction
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: access_token
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPaymentStatusResponse'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401Response'
+        405:
+          description: Access blocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error405Response'
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500Response'
+        503:
+          description: Channel Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error503Response'
+      x-test-suite:
+        - description: 'positive case'
+          request: 
+            pathParam:
+              - key: id
+                value: '1'
+            queryParam:
+              access_token: 'mock-access-token'
+            header:
+              X-Business-Id: '6abc8163gbadd721jdGG'
+              X-DD-Payment-Id: 'ddpy-abc123'
+          response:
+            http-status: 200
+            body: ' { "status": "success" } '
+  /api/payments/{id}/refunds:
+    post:
+      tags:
+        - payment
+      summary: Refund payment by ID
+      operationId: refundPayment
+      description: Refund Payment
+      parameters:
+        - in: header
+          name: X-DD-Payment-Id
+          required: false
+          schema:
+            type: string
+        - in: header
+          name: X-Business-Id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: entity
+          required: false
+          schema:
+            type: string
+            example: tranId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundRequest'
+      responses:
+        '200':
+          description: Refund Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundResponse'
+      x-test-suite:
+        - description: '[POS] should return success'
+          request: 
+            pathParam:
+              - key: id
+                value: '1'
+            header:
+              X-Business-Id: '6abc8163gbadd721jdGG'
+              X-DD-Payment-Id: 'ddpy-abc123'
+            body: '{"access_token":"AYjcyMzY3ZDhiNmJkNTY"}'
+          response:
+            http-status: 200
+            body: '{"status": "success"}'
+  /api/resources/login-url:
+    get:
+      tags:
+        - resource
+      summary: Returns the login URL of the bank
+      operationId: getLoginUrlResource
+      description: Builds and returns the login URL of the bank
+      parameters:
+        - in: header
+          name: X-Business-Id
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: query
+          description: The state to be included when redirecting back
+          required: true
+          schema:
+            type: string
+        - name: redirect_url
+          in: query
+          description: The base redirect URL after logging in
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: login url successfully retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginURLResourceResponse'
+      x-test-suite:
+        - description: '[POS] should return correct loggin url'
+          request:
+            queryParam:
+              id: '1'
+              redirect_url: 'http://google.com'
+            header:
+              X-Business-Id: '6abc8163gbadd721jdGG'
+          response:
+            http-status: 200
+            body: '{"login_url":"http://google.com","registration_id":"123","code_verifier":"abc123"}'
+
+components:
+  schemas:
+    PaymentRequest:
+      type: object
+      required:
+        - access_token
+        - reference_id
+        - account_id
+        - amount
+      properties:
+        access_token:
+          type: string
+          example: AYjcyMzY3ZDhiNmJkNTY
+        account_id:
+          type: string
+          example: <acctHashCode>
+        reference_id:
+          type: string
+          example: merchantsTransactionId
+        amount:
+          type: number
+          example: 10000
+        description:
+          type: string
+          example: Buy sisig because hungry. Why do you wanna know
+    PaymentResponse:
+      type: object
+      required:
+        - otp_reference_number
+        - mobile_number
+      properties:
+        id:
+          type: string
+          example: tranId
+        mobile_number:
+          type: string
+          example: '+63123****123'
+        otp_reference_number:
+          type: string
+          example: '67ee26810bb52f219e2d410774a3ac214012030af0d0dd4743'
+        otp_expired_date:
+          type: string
+          example: '2021-01-01T01-01-01Z'
+    GetPaymentStatusResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - success
+            - failed
+            - unknown
+    RefundRequest:
+      type: object
+      required:
+        - access_token
+        - amount
+      properties:
+        access_token:
+          type: string
+          example: AYjcyMzY3ZDhiNmJkNTY
+    RefundResponse:
+      type: object
+      required:
+        - status
+        - refund_id
+      properties:
+        status:
+          type: string
+          enum:
+            - success
+            - failed
+    LoginURLResourceResponse:
+      type: object
+      required:
+        - login_url
+      properties:
+        login_url:
+          type: string
+        registration_id:
+          type: string
+        code_verifier:
+          type: string
+    Error400Response:
+      type: object
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: string
+          enum:
+            - API_VALIDATION_ERROR
+            - INVALID_ACCOUNT_DETAILS
+            - ACCOUNT_NOT_FOUND_ERROR
+            - MAX_OTP_ATTEMPTS_ERROR
+            - INVALID_OTP_ERROR
+            - EXPIRED_OTP_ERROR
+            - INSUFFICIENT_BALANCE
+            - MAX_AMOUNT_LIMIT_ERROR
+            - TRANSACTION_NOT_FOUND_ERROR
+            - PAYMENT_STATUS_FAILED
+            - PAYMENT_EXPIRED
+            - REFUND_FAILED
+        message:
+          type: string
+    Error401Response:
+      type: object
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: string
+          enum:
+            - TOKENIZATION_FAILED
+            - ACCESS_UNAUTHORIZED
+        message:
+          type: string
+    Error405Response:
+      type: object
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: string
+          enum:
+            - ACCOUNT_ACCESS_BLOCKED
+        message:
+          type: string
+    Error408Response:
+      type: object
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: string
+          enum:
+            - OTP_DELIVERY_ERROR
+        message:
+          type: string
+    Error500Response:
+      type: object
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: string
+          enum:
+            - SERVER_ERROR
+            - TEMPORARY_UNKNOWN_ERROR
+        message:
+          type: string
+    Error503Response:
+      type: object
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: string
+          enum:
+            - CHANNEL_UNAVAILABLE
+            - BANK_LINKING_ERROR
+            - BANK_UNLINKING_ERROR
+        message:
+          type: string
+  parameters:
+    clientVersion:
+      in: header
+      name: client-version
+      description: The requester's client version used to access this service
+      schema:
+        type: string
+        example: 'v1.0.0'
+      required: true
+    teamName:
+      in: header
+      name: team-name
+      description: The requester's team [link](https://docs.google.com/document/d/1Bvs1A7VJwribkS9WM-s96ikXxgNa0fZrvLyLrIH811s/edit#heading=h.msfrxiz473dv)
+      schema:
+        type: string
+        example: direct-debit
+      required: true
+    service:
+      in: header
+      name: service-name
+      description: The requester's service name
+      schema:
+        type: string
+        example: direct-debit-service
+      required: true
+
