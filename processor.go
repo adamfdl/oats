@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 )
 
@@ -30,19 +29,22 @@ func (testProcessor processTestSuites) processTestSuites(httpMethod, pathName st
 			PathName:    pathName,
 			Description: test.Description,
 			Operation:   httpMethod,
+                        ResultDetails: resultDetails{},
 		}
 
 		statusCode, body, err := testProcessor.httpExecuter.execute(httpMethod, pathName, test.Request)
 		if err != nil {
-			reason := fmt.Sprintf("Failed HTTP request. Error is: %v", err)
-			testSuite.Fail(reason)
+			testSuite.FailWithError(err)
 			testSuites = append(testSuites, testSuite)
 			continue
 		}
 
+                // Set the expected and actual results for the report
+                testSuite.ResultDetails.SetActualExpectHTTPStatus(test.Response.HTTPStatus, statusCode)
+                testSuite.ResultDetails.SetActualExpectBody(test.Response.Body, string(body))
+
 		if test.Response.HTTPStatus != statusCode {
-			reason := fmt.Sprintf("Status code mismatch\n\nExpected %d, got: %d", test.Response.HTTPStatus, statusCode)
-			testSuite.Fail(reason)
+			testSuite.Fail()
 			testSuites = append(testSuites, testSuite)
 			continue
 		}
@@ -50,15 +52,13 @@ func (testProcessor processTestSuites) processTestSuites(httpMethod, pathName st
 		// TODO@adam: Response object has not been validated
                 bodyIsEqual, err := compareResponse([]byte(test.Response.Body), body)
                 if err != nil {
-			reason := fmt.Sprintf("Possible bug in oats project. Error is: %v", err)
-			testSuite.Fail(reason)
+			testSuite.FailWithError(err)
 			testSuites = append(testSuites, testSuite)
 			continue
                 }
 
                 if !bodyIsEqual {
-			reason := fmt.Sprintf("Body mismatch. Expected %s got: %s", test.Response.Body, string(body))
-			testSuite.Fail(reason)
+			testSuite.Fail()
 			testSuites = append(testSuites, testSuite)
 			continue
                 }
