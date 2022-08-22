@@ -1,7 +1,8 @@
 package main
 
 import (
-        "os"
+	"fmt"
+	"os"
 
 	"github.com/olekukonko/tablewriter"
 )
@@ -44,6 +45,10 @@ type Report struct {
 	TestSuites []testSuiteReport
 }
 
+func (r Report) generateFailingTestDescriptions() {
+
+}
+
 func (r Report) generate() {
 
         data := [][]string{}
@@ -54,14 +59,45 @@ func (r Report) generate() {
                 testSuiteReport.Operation,
                 testSuiteReport.Description,
                 testSuiteReport.Status.String(),
-                testSuiteReport.FailureReason,
             })
         }
 
         table := tablewriter.NewWriter(os.Stdout)
-        table.SetHeader([]string{"PATH", "OPERATION", "DESC", "STATUS", "FAILURE REASON"})
+        for i,  row := range data {
+
+            // Row 3 is STATUS -- Refer to SetHeader function
+            if row[3] == "FAILED" {
+
+                    // The function `Rich` also appends data to tablewriter
+                    // so we do not need to manually append again
+                    table.Rich(data[i], []tablewriter.Colors{
+                        {},
+                        {},
+                        {},
+                        {
+                            // If test is failing, we mark the cell as RED color
+                            tablewriter.Bold, tablewriter.BgRedColor,
+                        },
+                    })
+
+            } else {
+                    table.Rich(data[i], []tablewriter.Colors{
+                        {},
+                        {},
+                        {},
+                        {
+                            // If test is failing, we mark the cell as GREEN color
+                            tablewriter.Bold, tablewriter.FgGreenColor,
+                        },
+                    })
+
+            }
+
+        }
+
+        table.SetHeader([]string{"Path", "Operation", "Desc", "Status"})
         table.SetAutoMergeCellsByColumnIndex([]int{0})
         table.SetRowLine(true)
-        table.AppendBulk(data)
         table.Render()
+
 }
