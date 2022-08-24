@@ -4,7 +4,7 @@ on:
     branches: [ "master" ]
     
 jobs:
-  build:
+  ci:
     runs-on: ubuntu-latest
     steps:
 
@@ -22,5 +22,8 @@ jobs:
       - name: Build
         run: go build .
       
-      - name: Test
-        run: go test
+      - name: Test and cover
+        run: go test -race -coverprofile=coverage.out -covermode=atomic
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
