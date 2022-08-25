@@ -3,23 +3,38 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"log"
+	"os"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
 func main() {
 
-	// Load file
-	openApiSpec, err := openapi3.NewLoader().LoadFromFile("openapi.yaml")
+	var openApiFilePath string
+	flag.StringVar(&openApiFilePath, "f", "", "-f path/to/openapi.yaml")
+	flag.Parse()
+
+	if openApiFilePath == "" {
+		log.Fatalf("No file is specified. Ex oatsy -f path/to/openapi.yaml")
+	}
+
+	fileBytes, err := os.ReadFile(openApiFilePath)
 	if err != nil {
-		log.Fatal("Failed to load OpenApi spec file")
+		log.Fatalf("Failed to read file, err: %v", err)
+	}
+
+	// Load file
+	openApiSpec, err := openapi3.NewLoader().LoadFromData(fileBytes)
+	if err != nil {
+		log.Fatalf("Not a yaml file, err: %v", err)
 	}
 
 	// Validate the spec
 	ctx := context.Background()
 	if err := openApiSpec.Validate(ctx); err != nil {
-		log.Fatal("Bad OpenApi spec")
+		log.Fatalf("Bad OpenApi spec, please provide a correct OpenApi format, err: %v", err)
 	}
 
 	openApiJSON, err := openApiSpec.MarshalJSON()
