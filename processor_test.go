@@ -24,26 +24,20 @@ func TestProcessGetTestSuite(t *testing.T) {
 			Header: map[string]string{
 				"X-Business-ID": "mock-biz-id",
 			},
-			PathParam: []struct {
-				Key   string `json:"key"`
-				Value string `json:"value"`
-			}{
-				{
-					Key:   "id",
-					Value: "1",
-				},
+			PathParam: map[string]string{
+				"id": "1",
 			},
 		},
 		Response: XTestSuiteResponse{
 			HTTPStatus: http.StatusOK,
-                        Body:       `{ "status": "ok" }`,
+			Body:       `{ "status": "ok" }`,
 		},
 	}
 
 	xTestSuites := []XTestSuite{xTestSuite}
 	testProcessor := newTestProcessor(httpClientMock{})
 
-        testSuites := testProcessor.processTestSuites("GET", "/users", xTestSuites)
+	testSuites := testProcessor.processTestSuites("GET", "/users", xTestSuites)
 	assert.Equal(t, "[POS] Should return success", testSuites[0].Description)
 	assert.Equal(t, "GET", testSuites[0].Operation)
 	assert.Equal(t, testResultPassed, testSuites[0].Status)

@@ -1,0 +1,116 @@
+openapi: 3.0.0
+info:
+  version: 0.2.0
+  title: 'Oats tetster'
+  description: 'Chinabank Direct Debit Connector'
+servers:
+  - description: Local development
+    url: 'http://localhost:3002'
+  - description: Staging development
+    url: 'http://direct-debit-staging:3002'
+paths:
+  /api/payments:
+    post:
+      tags:
+        - payment
+      summary: Creates a payment
+      operationId: createPayment
+      description: Creates a payment
+      parameters:
+        - in: header
+          name: X-DD-Payment-Id
+          required: false
+          schema:
+            type: string
+        - in: header
+          name: X-Business-Id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+        description: Payment Request
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+      x-test-suite:
+        - description: '[POS] should create payment'
+          request: 
+            header:
+              X-Business-Id: '6abc8163gbadd721jdGG'
+              X-DD-Payment-Id: 'ddpy-abc123'
+            body: 
+              access_token: "AYjcyMzY3ZDhiNmJkNTY"
+              account_id: "<acctHashCode>"
+              reference_id: "reference_id"
+              amount: 10000
+              description: "Buy sisig because hungry. Why do you wanna know"
+          response:
+            http-status: 200
+            body: '{"id":"tranId","mobile_number":"+63123****123","otp_reference_number":"67ee26810bb52f219e2d410774a3ac214012030af0d0dd4743","otp_expired_date":"2021-01-01T01-01-01Z"}'
+        - description: '[NEG] magic num, account access blocked'
+          request: 
+            header:
+              X-Business-Id: '6abc8163gbadd721jdGG'
+              X-DD-Payment-Id: 'ddpy-abc123'
+            body: 
+              access_token: "AYjcyMzY3ZDhiNmJkNTY"
+              account_id: "<acctHashCode>"
+              reference_id: "reference_id"
+              amount: 9999
+              description: "Buy sisig because hungry. Why do you wanna know"
+          response:
+            http-status: 200
+            body: '{"id":"tranId","mobile_number":"+63123****123","otp_reference_number":"67ee26810bb52f219e2d410774a3ac214012030af0d0dd4743","otp_expired_date":"2021-01-01T01-01-01Z"}'
+        
+
+components:
+  schemas:
+    PaymentRequest:
+      type: object
+      required:
+        - access_token
+        - reference_id
+        - account_id
+        - amount
+      properties:
+        access_token:
+          type: string
+          example: AYjcyMzY3ZDhiNmJkNTY
+        account_id:
+          type: string
+          example: <acctHashCode>
+        reference_id:
+          type: string
+          example: merchantsTransactionId
+        amount:
+          type: number
+          example: 10000
+        description:
+          type: string
+          example: Buy sisig because hungry. Why do you wanna know
+    PaymentResponse:
+      type: object
+      required:
+        - otp_reference_number
+        - mobile_number
+      properties:
+        id:
+          type: string
+          example: tranId
+        mobile_number:
+          type: string
+          example: '+63123****123'
+        otp_reference_number:
+          type: string
+          example: '67ee26810bb52f219e2d410774a3ac214012030af0d0dd4743'
+        otp_expired_date:
+          type: string
+          example: '2021-01-01T01-01-01Z'

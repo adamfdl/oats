@@ -1,18 +1,19 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
+
+	"github.com/getkin/kin-openapi/openapi3"
 )
 
 type XTestSuiteRequest struct {
-	PathParam []struct {
-		Key   string `json:"key"`
-		Value string `json:"value"`
-	} `json:"pathParam,omitempty"`
-	QueryParam map[string]string `json:"queryParam,omitempty"`
-	Header     map[string]string `json:"header,omitempty"`
-        Body       string            `json:"body,omitempty"` // TODO@adam: Possibly refactor this to be map[string]interface{}
+	PathParam  map[string]string      `json:"pathParam,omitempty"`
+	QueryParam map[string]string      `json:"queryParam,omitempty"`
+	Header     map[string]string      `json:"header,omitempty"`
+	Body       map[string]interface{} `json:"body,omitempty"` // TODO@adam: Possibly refactor this to be map[string]interface{}
 }
 
 func (xtsr XTestSuiteRequest) Validate() error {
@@ -46,10 +47,10 @@ type PathItem struct {
 type Paths map[string]*PathItem
 
 func (p Paths) Validate() error {
-        if len(p) == 0 {
-                return errors.New("There is no path to process")
-        }
-        return nil
+	if len(p) == 0 {
+		return errors.New("There is no path to process")
+	}
+	return nil
 }
 
 type Server struct {
@@ -76,35 +77,71 @@ type Spec struct {
 }
 
 func (s Spec) Validate() error {
-        if err := s.Servers.Validate(); err != nil {
-                return err
-        }
-        if err :=  s.Paths.Validate(); err != nil {
-                return err
-        }
-        return nil
+	if err := s.Servers.Validate(); err != nil {
+		return err
+	}
+	if err := s.Paths.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 type testProcessor interface {
 	processTestSuites(httpMethod, pathName string, xTestSuites []XTestSuite) []testSuiteReport
 }
 
-func exec(s Spec) (Report, error) {
+func parseAndValidateSpec(fileBytes []byte) (s Spec, err error) {
+	openApi, err := openapi3.NewLoader().LoadFromData(fileBytes)
+	if err != nil {
+		return
+	}
+
+	ctx := context.Background()
+	if err = openApi.Validate(ctx); err != nil {
+		return
+	}
+
+	// Validate OpenApi spec format
+	openApiJSON, err := openApi.MarshalJSON()
+	if err != nil {
+		return
+	}
+
+	if err = json.Unmarshal(openApiJSON, &s); err != nil {
+		return
+	}
+
+	// Validate Oat's spec (X-Test-Suites)
+	if err = s.Validate(); err != nil {
+		return
+	}
+
+	return s, err
+}
+
+func exec(fileBytes []byte) (Report, error) {
+
+	s, err := parseAndValidateSpec(fileBytes)
+	if err != nil {
+		return Report{}, err
+	}
+
+	// Init http client once
 	httpClient := newHTTPClient(s.Servers[0].URL)
+
+	// Init test processor with httpClient as the dependency
 	testProcessor := newTestProcessor(httpClient)
+
+	// Inject dependencies and execute test
 	return execWithReporter(s, testProcessor)
 }
 
 func execWithReporter(s Spec, testProcessor testProcessor) (Report, error) {
-        if err := s.Validate(); err != nil {
-                return Report{}, err
-        }
-
 	report := Report{
 		TestSuites: []testSuiteReport{},
 	}
 
-        // In OpenApi 
+	// In OpenApi
 	for pathName, path := range s.Paths {
 		if path.Get != nil {
 			if path.Get.HasTestSuites() {
@@ -114,15 +151,12 @@ func execWithReporter(s Spec, testProcessor testProcessor) (Report, error) {
 		}
 
 		if path.Post != nil && path.Post.HasTestSuites() {
-                        if path.Post.HasTestSuites() {
+			if path.Post.HasTestSuites() {
 				testReports := testProcessor.processTestSuites(http.MethodPost, pathName, path.Post.XTestSuites)
 				report.TestSuites = append(report.TestSuites, testReports...)
-                        }
+			}
 		}
 
-		// TODO@adam: Process Delete operation
-
-		// TODO@adam: Process Patch operation
 	}
 
 	return report, nil

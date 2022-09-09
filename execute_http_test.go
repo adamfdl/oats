@@ -19,14 +19,8 @@ func TestExecuteGetRequest(t *testing.T) {
 		Header: map[string]string{
 			"X-Business-ID": "mock-biz-id",
 		},
-		PathParam: []struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
-		}{
-			{
-				Key:   "id",
-				Value: "1",
-			},
+		PathParam: map[string]string{
+			"id": "1",
 		},
 	}
 
@@ -51,48 +45,41 @@ func TestExecutePostRequest(t *testing.T) {
 		Header: map[string]string{
 			"X-Business-ID": "mock-biz-id",
 		},
-		PathParam: []struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
-		}{
-			{
-				Key:   "id",
-				Value: "1",
-			},
-			{
-				Key:   "order_id",
-				Value: "2",
-			},
+		PathParam: map[string]string{
+			"id":       "1",
+			"order_id": "2",
 		},
-                Body: ` { "token": "mock_token" } `,
+		Body: map[string]interface{}{
+			"token": "mock_token",
+		},
 	}
 
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-                body, _ := ioutil.ReadAll(r.Body)
-                defer r.Body.Close()
+		body, _ := ioutil.ReadAll(r.Body)
+		defer r.Body.Close()
 
-                j := map[string]string{}
-                err := json.Unmarshal(body, &j);
-                assert.NoError(t, err)
-                assert.Equal(t, "mock_token", j["token"])
+		j := map[string]string{}
+		err := json.Unmarshal(body, &j)
+		assert.NoError(t, err)
+		assert.Equal(t, "mock_token", j["token"])
 
-                assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "/users/1/order_id/2", r.URL.Path)
 		assert.Equal(t, "mock-biz-id", r.Header.Get("X-Business-ID"))
 
 		w.WriteHeader(http.StatusOK)
-                w.Write([]byte(` { "status": "ok" } `))
+		w.Write([]byte(` { "status": "ok" } `))
 	}))
 	defer s.Close()
 
-        httpClient := newHTTPClient(s.URL)
-        statusCode, body, err := httpClient.post("/users/{id}/order_id/{order_id}", testSuite)
-        assert.NoError(t, err)
-        assert.Equal(t, 200, statusCode)
+	httpClient := newHTTPClient(s.URL)
+	statusCode, body, err := httpClient.post("/users/{id}/order_id/{order_id}", testSuite)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, statusCode)
 
-        j := map[string]string{}
-        err = json.Unmarshal(body, &j);
-        assert.NoError(t, err)
+	j := map[string]string{}
+	err = json.Unmarshal(body, &j)
+	assert.NoError(t, err)
 
-        assert.Equal(t, "ok", j["status"])
+	assert.Equal(t, "ok", j["status"])
 }
