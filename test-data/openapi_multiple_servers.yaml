@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   version: 0.2.0
-  title: 'Oats tetster'
+  title: 'Oatsy tetster'
   description: 'Chinabank Direct Debit Connector'
 servers:
   - description: Local development
