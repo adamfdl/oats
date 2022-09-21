@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -43,14 +44,20 @@ func (testProcessor processTestSuites) processTestSuites(httpMethod, pathName st
 		testSuite.ResultDetails.SetActualExpectHTTPStatus(test.Response.HTTPStatus, statusCode)
 		testSuite.ResultDetails.SetActualExpectBody(test.Response.Body, string(body))
 
-		if test.Response.HTTPStatus != statusCode {
-			testSuite.Fail()
-			testSuites = append(testSuites, testSuite)
-			continue
-		}
+		// `test.Response.ShouldSkipBodyValidation` should be run first before anything
+		// so that the value is set before we do assertions.
+		//
+		// If we do assertions first there might be a chance that this
+		// `test.Response.ShouldSkipBodyValidation` would be skipped
+		if test.Response.ShouldSkipBodyValidation() {
+			// Modify the test suite report so it does not show
+			// body assertions
+			testSuite.ShouldSkipBodyValidation = true
+			if test.Description == "[NEG] Invalid otp" {
+				fmt.Println(testSuite.ShouldSkipBodyValidation)
+			}
 
-		if !test.Response.ShouldSkipBodyValidation() {
-			// TODO@adam: Response object has not been validated
+		} else {
 			bodyIsEqual, err := compareResponse([]byte(test.Response.Body), body)
 			if err != nil {
 				testSuite.FailWithError(err)
@@ -63,7 +70,12 @@ func (testProcessor processTestSuites) processTestSuites(httpMethod, pathName st
 				testSuites = append(testSuites, testSuite)
 				continue
 			}
+		}
 
+		if test.Response.HTTPStatus != statusCode {
+			testSuite.Fail()
+			testSuites = append(testSuites, testSuite)
+			continue
 		}
 
 		testSuite.Pass()

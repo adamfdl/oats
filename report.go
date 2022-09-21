@@ -71,14 +71,12 @@ func (rd *resultDetails) SetActualExpectBody(expected, actual string) {
 }
 
 type testSuiteReport struct {
-	PathName      string
-	Description   string
-	Operation     string
-	Status        testResult
-	ResultDetails resultDetails
-
-	FailureReason string
-
+	PathName                 string
+	Description              string
+	Operation                string
+	Status                   testResult
+	ResultDetails            resultDetails
+	ShouldSkipBodyValidation bool
 	// This error is caused by http client returning error, we cannot assert the statusCodes
 	// or bodies if there are error in the http call
 	Err error
@@ -138,6 +136,13 @@ func (r Report) generateFailingTestDescriptions() {
 				color.Green(p1)
 			} else {
 				color.Red(p1)
+			}
+
+			if testSuiteReport.Description == "[NEG] Invalid otp" {
+				fmt.Println(testSuiteReport.ShouldSkipBodyValidation)
+			}
+			if testSuiteReport.ShouldSkipBodyValidation {
+				continue
 			}
 
 			var p2 = fmt.Sprintf("Expected body: \n\n%s\n\nActual body: \n\n%s\n",
