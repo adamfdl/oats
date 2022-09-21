@@ -49,18 +49,21 @@ func (testProcessor processTestSuites) processTestSuites(httpMethod, pathName st
 			continue
 		}
 
-		// TODO@adam: Response object has not been validated
-		bodyIsEqual, err := compareResponse([]byte(test.Response.Body), body)
-		if err != nil {
-			testSuite.FailWithError(err)
-			testSuites = append(testSuites, testSuite)
-			continue
-		}
+		if !test.Response.ShouldSkipBodyValidation() {
+			// TODO@adam: Response object has not been validated
+			bodyIsEqual, err := compareResponse([]byte(test.Response.Body), body)
+			if err != nil {
+				testSuite.FailWithError(err)
+				testSuites = append(testSuites, testSuite)
+				continue
+			}
 
-		if !bodyIsEqual {
-			testSuite.Fail()
-			testSuites = append(testSuites, testSuite)
-			continue
+			if !bodyIsEqual {
+				testSuite.Fail()
+				testSuites = append(testSuites, testSuite)
+				continue
+			}
+
 		}
 
 		testSuite.Pass()

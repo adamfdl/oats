@@ -21,8 +21,13 @@ func (xtsr XTestSuiteRequest) Validate() error {
 }
 
 type XTestSuiteResponse struct {
+	//TODO: Probably should refactor these fields as pointers
 	Body       string `json:"body,omitempty"`
 	HTTPStatus int    `json:"http-status,omitempty"`
+}
+
+func (xtsr XTestSuiteResponse) ShouldSkipBodyValidation() bool {
+	return xtsr.Body == ""
 }
 
 type XTestSuite struct {

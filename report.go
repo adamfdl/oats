@@ -18,6 +18,7 @@ const (
 )
 
 var testResultToString = map[testResult]string{
+	// TODO: Add SKIPPED test result
 	testResultPassed: "PASSED",
 	testResultFailed: "FAILED",
 }
