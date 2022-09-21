@@ -126,7 +126,7 @@ func exec(fileBytes []byte) (Report, error) {
 		return Report{}, err
 	}
 
-	// Init http client once
+	// Init http client once, so we can test this layer
 	httpClient := newHTTPClient(s.Servers[0].URL)
 
 	// Init test processor with httpClient as the dependency

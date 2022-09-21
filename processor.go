@@ -6,7 +6,7 @@ import (
 )
 
 type httpExecuter interface {
-        execute(httpMethod, pathName string, xTestSuiteRequest XTestSuiteRequest) (statusCode int, body []byte, err error)
+	execute(httpMethod, pathName string, xTestSuiteRequest XTestSuiteRequest) (statusCode int, body []byte, err error)
 }
 
 type processTestSuites struct {
@@ -26,10 +26,10 @@ func (testProcessor processTestSuites) processTestSuites(httpMethod, pathName st
 	for _, test := range xTestSuites {
 
 		testSuite := testSuiteReport{
-			PathName:    pathName,
-			Description: test.Description,
-			Operation:   httpMethod,
-                        ResultDetails: resultDetails{},
+			PathName:      pathName,
+			Description:   test.Description,
+			Operation:     httpMethod,
+			ResultDetails: resultDetails{},
 		}
 
 		statusCode, body, err := testProcessor.httpExecuter.execute(httpMethod, pathName, test.Request)
@@ -39,9 +39,9 @@ func (testProcessor processTestSuites) processTestSuites(httpMethod, pathName st
 			continue
 		}
 
-                // Set the expected and actual results for the report
-                testSuite.ResultDetails.SetActualExpectHTTPStatus(test.Response.HTTPStatus, statusCode)
-                testSuite.ResultDetails.SetActualExpectBody(test.Response.Body, string(body))
+		// Set the expected and actual results for the report
+		testSuite.ResultDetails.SetActualExpectHTTPStatus(test.Response.HTTPStatus, statusCode)
+		testSuite.ResultDetails.SetActualExpectBody(test.Response.Body, string(body))
 
 		if test.Response.HTTPStatus != statusCode {
 			testSuite.Fail()
@@ -50,18 +50,18 @@ func (testProcessor processTestSuites) processTestSuites(httpMethod, pathName st
 		}
 
 		// TODO@adam: Response object has not been validated
-                bodyIsEqual, err := compareResponse([]byte(test.Response.Body), body)
-                if err != nil {
+		bodyIsEqual, err := compareResponse([]byte(test.Response.Body), body)
+		if err != nil {
 			testSuite.FailWithError(err)
 			testSuites = append(testSuites, testSuite)
 			continue
-                }
+		}
 
-                if !bodyIsEqual {
+		if !bodyIsEqual {
 			testSuite.Fail()
 			testSuites = append(testSuites, testSuite)
 			continue
-                }
+		}
 
 		testSuite.Pass()
 		testSuites = append(testSuites, testSuite)
@@ -70,16 +70,17 @@ func (testProcessor processTestSuites) processTestSuites(httpMethod, pathName st
 	return testSuites
 }
 
+//TODO: Refactor this code placement
 func compareResponse(a, b []byte) (bool, error) {
 
-        var json1, json2 interface{}
-        if err := json.Unmarshal(a, &json1); err != nil {
-            return false, err
-        }
+	var json1, json2 interface{}
+	if err := json.Unmarshal(a, &json1); err != nil {
+		return false, err
+	}
 
-        if err := json.Unmarshal(b, &json2); err != nil {
-            return false, err
-        }
+	if err := json.Unmarshal(b, &json2); err != nil {
+		return false, err
+	}
 
 	return reflect.DeepEqual(json1, json2), nil
 }

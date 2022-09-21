@@ -40,8 +40,10 @@ type actualExpectBody struct {
 	Actual   string
 }
 
+// Need to do deep equal
 func (a actualExpectBody) Match() bool {
-	return a.Expected == a.Actual
+	equalityResult, _ := compareResponse([]byte(a.Expected), []byte(a.Actual))
+	return equalityResult
 }
 
 type resultDetails struct {
